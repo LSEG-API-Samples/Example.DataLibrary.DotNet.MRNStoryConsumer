@@ -494,7 +494,7 @@ Then add following modules to Program.cs.
 
 ```csharp
 using Refinitiv.DataPlatform.Content;
-using Refinitiv.DataPlatform.Content.Streaming;
+using Refinitiv.DataPlatform.Content.News;
 ```
 
 To retrieve MRN Story data, you can use ContentFactory rather than DeliveryFactory to create MachineReadableNews object. The application can use ContentFactory.CreateMachineReadableNews to create the object like the following snippet codes.
