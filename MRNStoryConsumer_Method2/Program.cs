@@ -5,9 +5,10 @@ using Refinitiv.DataPlatform;
 using Refinitiv.DataPlatform.Core;
 using Refinitiv.DataPlatform.Delivery.Stream;
 using Refinitiv.DataPlatform.Content;
-using Refinitiv.DataPlatform.Content.Streaming;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Refinitiv.DataPlatform.Content.News;
+
 namespace MRNStoryConsumer_Method2
 {
     class Program
@@ -20,19 +21,18 @@ namespace MRNStoryConsumer_Method2
         #endregion
 
         #region RDPUserCredential
-            private const string RDPUser = "<RDP Username>";
+            private const string RDPUser = "<RDP User/Email>";
             private const string RDPPassword = "<RDP Password>";
             private const string RDPAppKey = "<App Key>";
         #endregion
-        
         private static Session.State _sessionState = Session.State.Closed;
-        private static int runtime=60000000;
-        static void Main(string[] args)
+        private static readonly int runtime=60000000;
+        static void Main()
         {
             // Set Logger level to Trace
             Log.Level = NLog.LogLevel.Trace;
 
-            bool useRDP=false;
+            bool useRDP=true;
             ISession session;
             if(!useRDP)
             {
@@ -52,7 +52,7 @@ namespace MRNStoryConsumer_Method2
             {
                 System.Console.WriteLine("Start RDP PlatformSession");
                 session = CoreFactory.CreateSession(new PlatformSession.Params()
-                    .OAuthGrantType(new GrantPassword().UserName(RDPUser)
+                    .WithOAuthGrantType(new GrantPassword().UserName(RDPUser)
                         .Password(RDPPassword))
                     .AppKey(RDPAppKey)
                     .WithTakeSignonControl(true)
@@ -68,16 +68,14 @@ namespace MRNStoryConsumer_Method2
             {
                 System.Console.WriteLine("Session is now Opened");
                 System.Console.WriteLine("Sending MRN_STORY request");
-                using (MachineReadableNews mrnNews =ContentFactory.CreateMachineReadableNews(new MachineReadableNews.Params()
-                              .Session(session)
-                              .WithNewsDatafeed("MRN_STORY")
-                              .OnError((e,msg)=>Console.WriteLine(msg))
-                              .OnStatus((e, msg) => Console.WriteLine(msg))
-                              .OnNews((e, msg) => ProcessNewsContent(msg))))
-            {
-                mrnNews.Open();
-                Thread.Sleep(runtime);
-            }
+                using var mrnNews = MachineReadableNews.Definition().OnError((stream, err) => Console.WriteLine($"{DateTime.Now}:{err}"))
+                    .OnStatus((stream, status) => Console.WriteLine(status))
+                    .NewsDatafeed(MachineReadableNews.Datafeed.MRN_STORY)
+                    .OnNewsStory((stream, newsItem) => ProcessNewsContent(newsItem.Raw));
+                {
+                    mrnNews.Open();
+                    Thread.Sleep(runtime);
+                }
                 
             }
         }

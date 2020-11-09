@@ -4,26 +4,24 @@
 
 It's been a while we receive a question from the .NET developer about easy to use solutions that can help them save the time to develop the application for retrieving market data from Elektron via both the TREP and Elektron Real-Time(ERT) in Cloud.
 
-Typically, ERT in Cloud and TREP version 3.2.x and later version provide a Websocket connection for a developer so that they can use any WebSocket client library to establish a connection and communicate with the WebSocket server directly. Anyway, to retrieve data from ERT in Cloud, it requires additional steps that the connecting user must authenticate themselves before a session establishing with the server. Moreover, the application also needs to design the application's workflow to control the JSON request and response message along with maintaining the ping and pong, which is a heartbeat message between the client app and the server-side. As a result, the workflow to create the application is quite a complicated process. 
+Typically, ERT in Cloud and TREP version 3.2.x and later version provide a Websocket connection for a developer so that they can use any WebSocket client library to establish a connection and communicate with the WebSocket server directly. Anyway, to retrieve data from ERT in Cloud, it requires additional steps that the connecting user must authenticate themselves before a session establishing with the server. Moreover, the application also needs to design the application's workflow to control the JSON request and response message along with maintaining the ping and pong, which is a heartbeat message between the client app and the server-side. As a result, the workflow to create the application is quite a complicated process.
 
 [The Refinitiv Data Platform Libraries for .NET (RDP.NET)](https://developers.refinitiv.com/refinitiv-data-platform/refinitiv-data-platform-libraries) is a new community-based library which is designed as ease-of-use interfaces and it can help eliminate the development process complexity. The below picture depicts the architecture of RDP Libraries. The below picture depicts the architecture of RDP Libraries.
 
-![RDPArchitecture](https://developers.refinitiv.com/sites/default/files/inline/images/RDP.png)
+![RDPArchitecture](./images/RDP.png)
 
 And the following picture is an architecture and layers from the Libraries.
 
-![RDPlayer](https://developers.refinitiv.com/sites/default/files/inline/images/AbstractLayer3.png)
+![RDPlayer](./images/abstractlayer3.png)
 
 The RDP.NET are ease-of-use APIs defining a set of uniform interfaces providing the developer access to the Refinitiv Data Platform and Elektron. The APIs are designed to provide consistent access through multiple access channels; developers can choose to access content from the desktop, through their deployed streaming services or directly to the cloud.  The interfaces encompass a set of unified Web APIs providing access to both streaming (over WebSockets) and non-streaming (HTTP REST) data available within the platform.
 
 This article will provide a sample usage to create a .NET Core console app to retrieve MRN News Story from TREP or ERT in Cloud using [RDP.NET library](https://developers.refinitiv.com/refinitiv-data-platform/refinitiv-data-platform-libraries).  It will describe how to use an interfaces from Core/Delivery Layer to request a Streaming data especially a real-time News from MRN Story data. This article also provides an example application that implements a function to manage a JSON request and response message. It will show you how to manually concatenate and decompress MRN data fragments. Moreover, the article will show you alternate options from a Content Layer to retrieve the same MRN Story data.
 
-
-
 ## Prerequisites
 
 - .NET Core SDK 3.1 or later versions.
-- [Visual Studio Code](https://code.visualstudio.com/)/Text editor or Visual Studio 2017/2019. 
+- [Visual Studio Code](https://code.visualstudio.com/)/Text editor or Visual Studio 2017/2019.
 - Understand concepts and basic usage of Refinitiv Data Platform (RDP) Libraries for .NET. You can read [the Introduction to RDP Libraries document](https://developers.refinitiv.com/refinitiv-data-platform/refinitiv-data-platform-libraries/docs?content=62446&type=documentation_item) from developer portal.
 
 ## Using .NET Core with RDP.NET Library
@@ -46,10 +44,10 @@ dotnet run
 
 dotnet new creates an up-to-date rdpmrnconsumer.csproj project file with the dependencies necessary to build a console app. It also creates a Program.cs, a basic file containing the entry point for the application. It will shows messge "Hello World" when you type **dotnet run** command.
 
-Next step type following command to add Refinitiv.DataPlatfrom and its dependencies from [Nuget](https://www.nuget.org/packages/Refinitiv.DataPlatform/) to the project. Current version at the time we write this article is a pre-release version 1.0.0-alpha
+Next step type following command to add Refinitiv.DataPlatfrom and its dependencies from [Nuget](https://www.nuget.org/packages/Refinitiv.DataPlatform/) to the project. Current version at the time we write this article is a pre-release version 1.0.3-alpha
 
 ```
-dotnet add package Refinitiv.DataPlatform --version 1.0.0-alpha
+dotnet add package Refinitiv.DataPlatform --version 1.0.3-alpha
 ```
 
 Then add following mudules to Program.cs.
@@ -99,11 +97,13 @@ session = CoreFactory.CreateSession(new DeployedPlatformSession.Params()
                     })
                     .OnEvent((s, eventCode, msg) => Console.WriteLine($"{DateTime.Now}: {msg}. (Event: {eventCode})")));
 ```
+
 Note that we will add ___sessionState__ variable to the class to sync the session state after we call Open or OpenAsync. We will check the session state before sending Item Request. Please add the following codes to Prgram class.
 
 ```csharp
 private static Session.State _sessionState = Session.State.Closed;
 ```
+
 Then you need to pass a callback function to OnState and OnEvent to monitor the Session state and receiving events from RDP internal library. The msg variable in the OnEvent message is a JObject which is JSON message containing the content for a specific event. It could be an error from the backend, and below is a sample JSON message when the DACS user is not valid.
 
 ```json
@@ -129,7 +129,7 @@ Then add the following codes in the Main method to create PlatformSession. The L
 ```csharp
  ISession session=null;
  session = CoreFactory.CreateSession(new PlatformSession.Params()
-                    .OAuthGrantType(new GrantPassword().UserName(RDPUser)
+                    .WithOAuthGrantType(new GrantPassword().UserName(RDPUser)
                         .Password(RDPPassword))
                     .AppKey(RDPAppKey)
                     .WithTakeSignonControl(true)
@@ -140,6 +140,7 @@ Then add the following codes in the Main method to create PlatformSession. The L
                     })
                     .OnEvent((s, eventCode, msg) => Console.WriteLine($"{DateTime.Now}: {msg}. (Event: {eventCode})")));
 ```
+
 After we created the session, then we need to call the __session.Open()__ Or __session.OpenAsync()__ to open the session. The Websocket library (which is [websocketsharp.core](https://www.nuget.org/packages/websocketsharp.core/)) used by RDP.NET will establish a connection to the server and manage to send authentication requests and process the response and maintain the connectivity between the client app and server.
 
 As we said earlier, when it has an error about the credential, the RDP.NET library returns the error message with the code from the RDP gateway. Below is a sample JSON message when the user passes an invalid username or password.
@@ -162,7 +163,7 @@ There are two approaches the application can use to retrieve data for market pri
 
 - __The second approach__ is to add Nuget package Refinitiv.DataPlatform.Content and then use method ContentFactory.CreateMachineReadableNews to create MachineReadableNews object. MachineReadableNews is the class from Content Layer from the Introduction topics and it was designed to retrieve MRN contents and provide callback OnNews to return MRN JSON Message to the application layer.
 
-We will create a separate project to demonstrate the usage of each approach. 
+We will create a separate project to demonstrate the usage of each approach.
 
 ### Using Stream API to retrieve MRN Story data
 
@@ -190,6 +191,7 @@ Then you can add the following codes to Main method. Application just print the 
     stream.Open();
 }
 ```
+
 Variable **msg** is a JObject and it contains the JSON message provided by the server. The following sample JSON message is a result when an application requests ItemName "AUD=" with the "MarketPrice" Domain Model. If you did not call method WithDomain it will use "MarketPrice" as default.
 
 ```JSON
@@ -329,16 +331,18 @@ public class MrnStoryData
         ...
     }
 ```
+
 Then we will change the Stream API to request MRN Story data instead:
+
 ```csharp
- using (IStream stream = DeliveryFactory.CreateStream(
-                new ItemStream.Params().Session(session)
-                    .Name("MRN_STORY")
-                    .WithDomain("NewsTextAnalytics")
-                    .OnRefresh((s, msg) => Console.WriteLine($"{msg}\n\n"))
-                    .OnUpdate((s, msg) => ProcessMRNUpdateMessage(msg))
-                    .OnError((s, msg) => Console.WriteLine(msg))
-                    .OnStatus((s, msg) => Console.WriteLine($"{msg}\n\n"))))
+ using var stream = DeliveryFactory.CreateStream(
+                    new ItemStream.Params().Session(session)
+                        .Name("MRN_STORY")
+                        .WithDomain("NewsTextAnalytics")
+                        .OnRefresh((s, msg) => Console.WriteLine($"{msg}\n\n"))
+                        .OnUpdate((s, msg) => ProcessMRNUpdateMessage(msg))
+                        .OnError((s, msg) => Console.WriteLine(msg))
+                        .OnStatus((s, msg) => Console.WriteLine($"{msg}\n\n")))
             {
                 // Open the stream...
                 stream.Open();
@@ -347,23 +351,23 @@ Then we will change the Stream API to request MRN Story data instead:
                 Console.ReadKey();
             }
 ```
+
 The application should verify the completion of the update message before calling the JSON.NET library to deserialize the JSON data to the class. We will add ProcessMRNUpdateMessage to Program class and add below snippet of codes to verify the data before convert it to the MrnStoryData object.
 
 ```csharp
 private static void ProcessMRNUpdateMessage(JObject updatemsg)
         {
-  
             if (updatemsg == null) throw new ArgumentNullException(nameof(updatemsg));
-            if (updatemsg.ContainsKey("Domain") && updatemsg["Domain"].Value<string>() == "NewsTextAnalytics" 
+            if (updatemsg.ContainsKey("Domain") && updatemsg["Domain"].Value<string>() == "NewsTextAnalytics"
                                                 && updatemsg.ContainsKey("Fields") && updatemsg["Fields"]!=null)
             {
-                
                 var mrnUpdateData=updatemsg["Fields"].ToObject<MrnStoryData>();
                 ProcessFieldData(mrnUpdateData);
             }
 
         }
 ```
+
 Next step, we will keep the MrnStoryData in the .NET Dictionary, where the number of a new Story Fragment is a key in the Dictionary. Below is a snippet of codes of the Dictionary object.
 
 ```csharp
@@ -381,6 +385,7 @@ To process content from MrnStoryData object, we will create the ProcessFieldData
    //Codes to handle MRN fragments
  }
 ```
+
 The first step in this function is to add a new Fragment or updating Fragment with the data from the subsequent updates. The second step is the codes to verify whether or not the update is the last fragment, and we can decompress the data using the JSON library.
 
 Below is the snippet of codes for the first part. It uses the UpdateCount variable to keep track of the Fragment Count.
@@ -432,7 +437,7 @@ Below is the snippet of codes for the first part. It uses the UpdateCount variab
 The next step is to verify whether or not the size of concatenated fragment data equal to Fragment size and then we can decompress it to JSON plain-text. In the snippet codes, we will create StoryData class which is a class to hold data for the MRN Story. We will convert the JSON data to the class and pass it to display function or just print the value of Headline and Body to console output.
 
 ```csharp
-               // Check if the update contains complete MRN Story 
+            // Check if the update contains complete MRN Story
             if (_mrnDataList[UpdateCount].IsCompleted)
             {
                 Console.WriteLine($"GUID:{_mrnDataList[UpdateCount].GUID}");
@@ -473,18 +478,16 @@ The next step is to verify whether or not the size of concatenated fragment data
 
 ```
 
-Note that the sample codes were created to demonstrate the necessary step to concatenate, and decompress the MRN data fragments. The algorithm may not cover all scenarios that might happen while running the example app. You can run the project downloaded from [Github](https://github.com/Refinitiv-API-Samples/Example.RDP.RDPDotNetMRNStoryConsumer) with your TREP or ERT in Cloud account to see the result. You can modify the codes to use your data structure and add your algorithm to the codes. 
+Note that the sample codes were created to demonstrate the necessary step to concatenate, and decompress the MRN data fragments. The algorithm may not cover all scenarios that might happen while running the example app. You can run the project downloaded from [Github](https://github.com/Refinitiv-API-Samples/Example.RDP.RDPDotNetMRNStoryConsumer) with your TREP or ERT in Cloud account to see the result. You can modify the codes to use your data structure and add your algorithm to the codes.
 
-The first approach requires more steps and codes to concatenate and verify the fragments before decompressing the MRN Story data to JSON plain-text. This approach may be suitable for a developer who wants want to leverage the functionality of the Session or Delivery layer provided by the library. And they want to control the algorithm to handle the MRN data themself. Some peoples may wish to logs or keep the refresh and update message along with the status in their storage or database system. 
-
-
+The first approach requires more steps and codes to concatenate and verify the fragments before decompressing the MRN Story data to JSON plain-text. This approach may be suitable for a developer who wants want to leverage the functionality of the Session or Delivery layer provided by the library. And they want to control the algorithm to handle the MRN data themself. Some peoples may wish to logs or keep the refresh and update message along with the status in their storage or database system.
 
 ### Using RDP Content library to retreive MRN Story
 
-We will talk about the second approach, which uses more shorter and easier codes. RDP.NET library provides a more easier way to retrieve particular content such as Price and MachineReadableNews or MRN data. To use the library for the content layer, we need to add the Nuget RDP.NET Content library to the project. You can use the following CLI to add the package as well. Note that the current version at the time we write this article still be a pre-release version 1.0.0-alpha.
+We will talk about the second approach, which uses more shorter and easier codes. RDP.NET library provides a more easier way to retrieve particular content such as Price and MachineReadableNews or MRN data. To use the library for the content layer, we need to add the Nuget RDP.NET Content library to the project. You can use the following CLI to add the package as well. Note that the current version at the time we write this article still be a pre-release version 1.0.3-alpha.
 
-```
-dotnet add package Refinitiv.DataPlatform.Content --version 1.0.0-alpha
+```bash
+dotnet add package Refinitiv.DataPlatform.Content --version 1.0.3-alpha3
 ```
 
 Then add following modules to Program.cs.
@@ -497,23 +500,22 @@ using Refinitiv.DataPlatform.Content.Streaming;
 To retrieve MRN Story data, you can use ContentFactory rather than DeliveryFactory to create MachineReadableNews object. The application can use ContentFactory.CreateMachineReadableNews to create the object like the following snippet codes.
 
 ```csharp
-using (MachineReadableNews mrnNews =
-                ContentFactory.CreateMachineReadableNews(new MachineReadableNews.Params()
-                              .Session(session)
-                              .WithNewsDatafeed("MRN_STORY")
-                              .OnError((e,msg)=>Console.WriteLine(msg))
-                              .OnStatus((e, msg) => Console.WriteLine(msg))
-                              .OnNews((e, msg) => Console.WriteLine(msg))))
-            {
-                mrnNews.Open();
-            }
+using var mrnNews = MachineReadableNews.Definition()
+                    .OnError((stream, err) => Console.WriteLine($"{DateTime.Now}:{err}"))
+                    .OnStatus((stream, status) => Console.WriteLine(status))
+                    .NewsDatafeed(MachineReadableNews.Datafeed.MRN_STORY)
+                    .OnNewsStory((stream, newsItem) => ProcessNewsContent(newsItem.Raw));
+                {
+                    mrnNews.Open();
+                    //...
+                }
 ```
 
-From the codes, you need to pass the session object to Session param and then set WithNewsDatafeed param to "MRN_STORY" if you wish to request MRN_STORY. Note that you can also change WithNewsDataFeed to retrieve MRN_TRNA and MRN_TRSI as well. 
+From the codes, you need to pass the session object to Session param and then set NewsDatafeed param to MRN_STORY if you wish to request MRN_STORY. Note that you can also change NewsDataFeed to retrieve MRN_TRNA and MRN_TRSI as well.
 
-When using the ContentFactory, you don't need to worry about concatenating and verifying the fragments. The Content layer will take care of this process on behalf of the application. The developer just need to define a function to process data from OnNews callback. The msg variable from OnNews is JObject and it holds the MRN JSON data contains the same structure as described in the MRN Data Model. So you can create your model class and deserialize the JSON data to the class and then pass the object back to the application layer.  
+When using the ContentFactory, you don't need to worry about concatenating and verifying the fragments. The Content layer will take care of this process on behalf of the application. The developer needs to define a function to process data from the OnNewsStory callback. The variable named newsItem from OnNewsStory is the IMRNStoryData interface. It holds both the full body text of the news content and the raw data; the data returned to the callback hold an MRN Story property that is the same structure described in the MRN Data Model. Anyway, if you need to process the MRNStory data yourself, you can get the raw data by calling newsItem.Raw and then deserialize the raw data to StoryData class and access a value from the class instead.
 
-The second approach is easier to use and it saves your time. Also it suitable for application developers who want to use small effort to request MRN content and interested only MRN data in JSON plain-text format. Anyway, if the application wants to access the raw data from the Refresh and Update message provided by the WebSocket Server. This one is not a recommended approach.
+The second approach is easier to use, and it saves time. Also, it suitable for application developers who required shorter lines of codes to retrieve MRN content.
 
 ## Troubleshoot RDP.NET issue
 
@@ -526,6 +528,7 @@ To change the Log level, you can add the following codes before creating the ses
 ```csharp
 Log.Level = NLog.LogLevel.Trace;
 ```
+
 You can use the information from the RDP.NET log file to analyze the data behavior and investigate the issue. The log also contains the authentication request and response along with the headers it send and receive from server. Below is a sample trace log generated by the library.
 
 ```
@@ -727,6 +730,7 @@ You can use the information from the RDP.NET log file to analyze the data behavi
 }"
 ...
 ```
+
 ## Build and Run example application
 
 You can download the solution from [Github](https://github.com/Refinitiv-API-Samples/Example.RDP.RDPDotNetMRNStoryConsumer). There are two project folders in the solution. The first project is a folder named __MRNStoryConsumer_Method1__. It's the project for the first approach. And the second one is folder __MRNStoryConsumer_Method2__. It's the project for the second approach.
@@ -736,6 +740,7 @@ Before building and runing the app, you have to modify the credential for TREP o
 ### Build and Run the project
 
 In command-line mode, go to the project folder which contains .csproj and type the following command:
+
 ```
 dotnet run
 ```
@@ -745,16 +750,19 @@ Or if you want to build the project to executable file you can type the followin
 ```
 dotnet build -c release -r win10-x64 -o ./release-x64
 ```
+
 It will create an executable file in a release-x64 folder. Then you can run MRNStoryConsumer_Method1.exe directly from the release folder.
 
 The above command is for windows 10 64 bit. If you want to build it on Linux or macOS, you can change it to one of the lists from [.NET Core RID Catalog](https://docs.microsoft.com/th-th/dotnet/core/rid-catalog). 
 
-For example, 
+For example,
 
 On the macOS, you have to change it to "osx-x64".
+
 ```
 dotnet build -c release -r osx-x64 -o ./release-x64
 ```
+
 It should generate executable file MRNStoryConsumer_Method1 under the release-x64 folder.
 
 You can use the same command to build any project.
@@ -771,7 +779,7 @@ You can download full source files and projects from [GitHub](https://github.com
 
 ## References
 
-* [The Refinitiv Data Platform Libraries for .NET (RDP.NET)](https://developers.refinitiv.com/refinitiv-data-platform/refinitiv-data-platform-libraries) 
+* [The Refinitiv Data Platform Libraries for .NET (RDP.NET)](https://developers.refinitiv.com/refinitiv-data-platform/refinitiv-data-platform-libraries)
 
 * [The Introduction to RDP Libraries document](https://developers.refinitiv.com/refinitiv-data-platform/refinitiv-data-platform-libraries/docs?content=62446&type=documentation_item)
 

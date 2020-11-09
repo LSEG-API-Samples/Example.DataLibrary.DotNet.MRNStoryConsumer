@@ -19,23 +19,23 @@ namespace MRNStoryConsumer_Method1
         #endregion
 
         #region RDPUserCredential
-            private const string RDPUser = "<RDP Username>";
+            private const string RDPUser = "<RDP User/Email>";
             private const string RDPPassword = "<RDP Password>";
             private const string RDPAppKey = "<App Key>";
         #endregion
 
         #region MRNDataProcessing
-            private static readonly Dictionary<int, Model.MrnStoryData> _mrnDataList = new Dictionary<int, Model.MrnStoryData>();
+        private static readonly Dictionary<int, Model.MrnStoryData> _mrnDataList = new Dictionary<int, Model.MrnStoryData>();
             private static int UpdateCount =0;
         #endregion
         private static Session.State _sessionState = Session.State.Closed;
-        private static int runtime=60000000;
-        static void Main(string[] args)
+        private static readonly int runtime=60000000;
+        static void Main()
         {
             // Set Logger level to Trace
             Log.Level = NLog.LogLevel.Trace;
 
-            bool useRDP=false;
+            bool useRDP=true;
             ISession session;
             if(!useRDP)
             {
@@ -55,7 +55,7 @@ namespace MRNStoryConsumer_Method1
             {
                 System.Console.WriteLine("Start RDP PlatformSession");
                 session = CoreFactory.CreateSession(new PlatformSession.Params()
-                    .OAuthGrantType(new GrantPassword().UserName(RDPUser)
+                    .WithOAuthGrantType(new GrantPassword().UserName(RDPUser)
                         .Password(RDPPassword))
                     .AppKey(RDPAppKey)
                     .WithTakeSignonControl(true)
@@ -71,18 +71,16 @@ namespace MRNStoryConsumer_Method1
             {
                 System.Console.WriteLine("Session is now Opened");
                 System.Console.WriteLine("Sending MRN_STORY request");
-                using (IStream stream = DeliveryFactory.CreateStream(
+                using var stream = DeliveryFactory.CreateStream(
                     new ItemStream.Params().Session(session)
                         .Name("MRN_STORY")
                         .WithDomain("NewsTextAnalytics")
                         .OnRefresh((s, msg) => Console.WriteLine($"{msg}\n\n"))
                         .OnUpdate((s, msg) => ProcessMRNUpdateMessage(msg))
                         .OnError((s, msg) => Console.WriteLine(msg))
-                        .OnStatus((s, msg) => Console.WriteLine($"{msg}\n\n"))))
-                {
-                    stream.Open();
-                    Thread.Sleep(runtime);
-                }
+                        .OnStatus((s, msg) => Console.WriteLine($"{msg}\n\n")));
+                stream.Open();
+                Thread.Sleep(runtime);
             }
         }
         private static void ProcessMRNUpdateMessage(JObject updatemsg)
