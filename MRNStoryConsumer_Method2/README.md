@@ -1,23 +1,25 @@
 
 ## Overview 
 
+**Update**: October 2021
+
 This example demonstrates how to use the delivery layer from the RDP.NET library to retrieve MRN_STORY data and provide an implementation to concatenate the MRN fragments from the update message. And then decompressing the concatenated data to JSON plain-text and print the MRN Story data to console output.
 
-The example app utilizes Core Delivery from the library to create a WebSocket session to connect to the WebSocket server on ERT in Cloud or TREP ADS. 
+The example app utilizes Core Delivery from the library to create a WebSocket session to connect to the WebSocket server on Refinitiv Real-Time Distribution System (RTDS) and Refinitiv Real-Time -- Optimized (RTO - formerly known as ERT in the Cloud). 
 
 To build run the example user has to install .NET Core 3 SDK and the user must modify the credential in the following section in Program.cs before building the app.
 
-* Modify the following section for testing the application with TREP 3.2.x or higher version. 
+* Modify the following section for testing the application with RTDS 3.2.x or higher version. 
 ```
-#region TREPCredential
-    private const string TREPUser = "<DACS User>";
+#region RTDSCredential
+    private const string RTDSUser = "<DACS User>";
     private const string appID = "<App ID>";
     private const string position = "<Your IP or Host Name>/net";
     private const string WebSocketHost = "<WebSocket Server>:<Websocket Port>";
 #endregion
 ```
 
-* Modify the following section for testing the application with RDP or ERT in Cloud.
+* Modify the following section for testing the application with RDP or RTO.
 
 ```
 #region RDPUserCredential

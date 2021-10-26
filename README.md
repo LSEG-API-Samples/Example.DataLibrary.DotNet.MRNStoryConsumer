@@ -2,9 +2,12 @@
 
 ## Introduction
 
-It's been a while we receive a question from the .NET developer about easy to use solutions that can help them save the time to develop the application for retrieving market data from Elektron via both the TREP and Elektron Real-Time(ERT) in Cloud.
+**Update**: October 2021
 
-Typically, ERT in Cloud and TREP version 3.2.x and later version provide a Websocket connection for a developer so that they can use any WebSocket client library to establish a connection and communicate with the WebSocket server directly. Anyway, to retrieve data from ERT in Cloud, it requires additional steps that the connecting user must authenticate themselves before a session establishing with the server. Moreover, the application also needs to design the application's workflow to control the JSON request and response message along with maintaining the ping and pong, which is a heartbeat message between the client app and the server-side. As a result, the workflow to create the application is quite a complicated process.
+It's been a while we receive a question from the .NET developer about easy to use solutions that can help them save the time to develop the application for retrieving market data from Refinitiv Real-Time via both the Refinitiv Real-Time Distribution System
+(RTDS) and Refinitiv Real-Time -- Optimized (RTO - formerly known as ERT in the Cloud).
+
+Typically, RTO and RTDS version 3.2.x and later version provide a Websocket connection for a developer so that they can use any WebSocket client library to establish a connection and communicate with the WebSocket server directly. Anyway, to retrieve data from RTO, it requires additional steps that the connecting user must authenticate themselves before a session establishing with the server. Moreover, the application also needs to design the application's workflow to control the JSON request and response message along with maintaining the ping and pong, which is a heartbeat message between the client app and the server-side. As a result, the workflow to create the application is quite a complicated process.
 
 [The Refinitiv Data Platform Libraries for .NET (RDP.NET)](https://developers.refinitiv.com/refinitiv-data-platform/refinitiv-data-platform-libraries) is a new community-based library which is designed as ease-of-use interfaces and it can help eliminate the development process complexity. The below picture depicts the architecture of RDP Libraries. The below picture depicts the architecture of RDP Libraries.
 
@@ -14,9 +17,9 @@ And the following picture is an architecture and layers from the Libraries.
 
 ![RDPlayer](./images/abstractlayer3.png)
 
-The RDP.NET are ease-of-use APIs defining a set of uniform interfaces providing the developer access to the Refinitiv Data Platform and Elektron. The APIs are designed to provide consistent access through multiple access channels; developers can choose to access content from the desktop, through their deployed streaming services or directly to the cloud.  The interfaces encompass a set of unified Web APIs providing access to both streaming (over WebSockets) and non-streaming (HTTP REST) data available within the platform.
+The RDP.NET are ease-of-use APIs defining a set of uniform interfaces providing the developer access to the Refinitiv Data Platform and Refinitiv Real-Time. The APIs are designed to provide consistent access through multiple access channels; developers can choose to access content from the desktop, through their deployed streaming services or directly to the cloud.  The interfaces encompass a set of unified Web APIs providing access to both streaming (over WebSockets) and non-streaming (HTTP REST) data available within the platform.
 
-This article will provide a sample usage to create a .NET Core console app to retrieve MRN News Story from TREP or ERT in Cloud using [RDP.NET library](https://developers.refinitiv.com/refinitiv-data-platform/refinitiv-data-platform-libraries).  It will describe how to use an interfaces from Core/Delivery Layer to request a Streaming data especially a real-time News from MRN Story data. This article also provides an example application that implements a function to manage a JSON request and response message. It will show you how to manually concatenate and decompress MRN data fragments. Moreover, the article will show you alternate options from a Content Layer to retrieve the same MRN Story data.
+This article will provide a sample usage to create a .NET Core console app to retrieve MRN News Story from RTDS or RTO using [RDP.NET library](https://developers.refinitiv.com/refinitiv-data-platform/refinitiv-data-platform-libraries).  It will describe how to use an interfaces from Core/Delivery Layer to request a Streaming data especially a real-time News from MRN Story data. This article also provides an example application that implements a function to manage a JSON request and response message. It will show you how to manually concatenate and decompress MRN data fragments. Moreover, the article will show you alternate options from a Content Layer to retrieve the same MRN Story data.
 
 ## Prerequisites
 
@@ -42,7 +45,7 @@ dotnet new console
 dotnet run
 ```
 
-dotnet new creates an up-to-date rdpmrnconsumer.csproj project file with the dependencies necessary to build a console app. It also creates a Program.cs, a basic file containing the entry point for the application. It will shows messge "Hello World" when you type **dotnet run** command.
+dotnet new creates an up-to-date rdpmrnconsumer.csproj project file with the dependencies necessary to build a console app. It also creates a Program.cs, a basic file containing the entry point for the application. It will shows message "Hello World" when you type **dotnet run** command.
 
 Next step type following command to add Refinitiv.DataPlatfrom and its dependencies from [Nuget](https://www.nuget.org/packages/Refinitiv.DataPlatform/) to the project. Current version at the time we write this article is a pre-release version 1.0.3-alpha
 
@@ -59,35 +62,35 @@ using Refinitiv.DataPlatform.Core;
 
 ### Create Session and use Stream API to retrieve real-time content
 
-According to the [RDP.NET online document](https://developers.refinitiv.com/refinitiv-data-platform/refinitiv-data-platform-libraries/docs?content=62446&type=documentation_item), in order to access the platform via RDP/ERT and Elektron, access requires authentication and connection semantics in order to communicate and retrieve content. the RDP Libraries provide this managed access through an interface called a Session. Session is the interface to a specific access channel and is responsible for defining authentication details, managing connection resources, and implementing the necessary protocol to manage the life cycle of the Session. There are two type of Session that we need to create in this application:
+According to the [RDP.NET online document](https://developers.refinitiv.com/refinitiv-data-platform/refinitiv-data-platform-libraries/docs?content=62446&type=documentation_item), in order to access the platform via RDP/RTO and Refinitiv Real-Time, access requires authentication and connection semantics in order to communicate and retrieve content. the RDP Libraries provide this managed access through an interface called a Session. Session is the interface to a specific access channel and is responsible for defining authentication details, managing connection resources, and implementing the necessary protocol to manage the life cycle of the Session. There are two type of Session that we need to create in this application:
 
-* PlatformSession (RDP, ERT in Cloud)
-* DeployedPlatformSession (Elektron,TREP/ADS)
+* PlatformSession (RDP, RTO)
+* DeployedPlatformSession (RTDS/ADS)
 
 The Session correspond to each of the access channels available and provides unique properties to support the specific requirements for that interface. Once the Session has been established, developers can use a Stream API which is the streaming interface delivering real-time content over WebSockets to request and process the response. As part of the Delivery layer,a Stream provides a simple, yet flexible design to access streaming content delivered using Event-driven callbacks defined within your application.
 
 The Stream allows you to subscribe to items of the different supporting models (MarketPrice, MarketByPrice, Machine Readable News (MRN), etc) available via a streaming connection to the platform. With the current design, a Stream is meant to be used with the Event Driven operation mode.
 
-#### Create Session for deployed TREP/ADS
+#### Create Session for deployed RTDS/ADS
 
-Open Program.cs and add the following codes which defined a credentials required by TREP/ADS websocket connection to Program class.
+Open Program.cs and add the following codes which defined a credentials required by RTDS/ADS websocket connection to Program class.
 
 ```csharp
-#region TREPCredential
-    private const string TREPUser = "<DACS User>";
+#region RTDSCredential
+    private const string RTDSUser = "<DACS User>";
     private const string appID = "<App ID>";
     private const string position = "<Your IP /Host Name>/net";
     private const string WebSocketHost = "<WebSocket Server>:<Websocket Port>";
 #endregion
 ```
 
-Add the following codes to the Main method to create a Session for DeployedPlatform and pass parameters under region TREPCredential to create session. In this example, we just print the state and message returned by the callback to console output.
+Add the following codes to the Main method to create a Session for DeployedPlatform and pass parameters under region RTDSCredential to create session. In this example, we just print the state and message returned by the callback to console output.
 
 ```csharp
 ISession session=null;
 session = CoreFactory.CreateSession(new DeployedPlatformSession.Params()
                     .Host(WebSocketHost)
-                    .WithDacsUserName(TREPUser)
+                    .WithDacsUserName(RTDSUser)
                     .WithDacsApplicationID(appID)
                     .WithDacsPosition(position)
                     .OnState((s, state, msg) =>
@@ -112,7 +115,7 @@ Then you need to pass a callback function to OnState and OnEvent to monitor the 
 }
 ```
 
-#### Create Session for Refinitiv Data Platfrom (RDP) or ERT in Cloud
+#### Create Session for Refinitiv Data Platfrom (RDP) or RTO
 
 Add the following codes which defined a credentials required by RDP websocket connection to Program class. 
 
@@ -159,7 +162,7 @@ As we said earlier, when it has an error about the credential, the RDP.NET libra
 
 There are two approaches the application can use to retrieve data for market price or another domain model.
 
-- __The first approach__ is to use the Stream API provided by Deliver layer to request data and implement the application's codes to handle the data returned from the callback. Delivery Layer also provide interface for the user to set the item name and domain model so that the application can use the Stream API to request data for any supported domain model. However, the application has to understand the structure of the JSON message for the specific domain it requested. In the example we will request MRN Story data from the NewsAnalystics domain, therefore, we will apply instructions from [MRN Data Model]((https://developers.refinitiv.com/sites/default/files/ThomsonReutersMRNElektronDataModelsv210_2.pdf)) in order to process the data correctly.
+- __The first approach__ is to use the Stream API provided by Deliver layer to request data and implement the application's codes to handle the data returned from the callback. Delivery Layer also provide interface for the user to set the item name and domain model so that the application can use the Stream API to request data for any supported domain model. However, the application has to understand the structure of the JSON message for the specific domain it requested. In the example we will request MRN Story data from the NewsAnalystics domain, therefore, we will apply instructions from [MRN Data Model](https://developers.refinitiv.com/en/api-catalog/refinitiv-real-time-opnsrc/rt-sdk-java/documentation#mrn-data-models-implementation-guide) in order to process the data correctly.
 
 - __The second approach__ is to add Nuget package Refinitiv.DataPlatform.Content and then use method ContentFactory.CreateMachineReadableNews to create MachineReadableNews object. MachineReadableNews is the class from Content Layer from the Introduction topics and it was designed to retrieve MRN contents and provide callback OnNews to return MRN JSON Message to the application layer.
 
@@ -167,7 +170,7 @@ We will create a separate project to demonstrate the usage of each approach.
 
 ### Using Stream API to retrieve MRN Story data
 
-Let start with the first approach. The following sample codes demonstrate how to open the item stream request using Stream API which is the class under Delivery layer. The API provide DeliveryFactory.CreateStream to create ItemStream. After the application call stream.open() it will send a new item request to Elektron or ERT in Cloud. Then the application can process the JSON data returns from the callback functions defined in OnRefresh, OnUpdate, and OnStatus. The application can use method __WithFields()__ to specify field lists for a view request, and it can set __WithStreaming(false)__ to send snapshot requests.
+Let start with the first approach. The following sample codes demonstrate how to open the item stream request using Stream API which is the class under Delivery layer. The API provide DeliveryFactory.CreateStream to create ItemStream. After the application call stream.open() it will send a new item request to Refinitiv Real-Time or RTO. Then the application can process the JSON data returns from the callback functions defined in OnRefresh, OnUpdate, and OnStatus. The application can use method __WithFields()__ to specify field lists for a view request, and it can set __WithStreaming(false)__ to send snapshot requests.
 
 To use the class from Delivery layer, you need to use the following modules.
 
@@ -260,9 +263,9 @@ Variable **msg** is a JObject and it contains the JSON message provided by the s
 }
 ```
 
-Typically the structure of the response message is the same as the structure mentioned in [Elektron Websocket](https://developers.refinitiv.com/elektron/websocket-api/quick-start). Hence it could say that the RDP.NET API responsible for managing the connection, send a request, and process a response message. It also maintains connectivity between the client app and the server on behalf of the application. The application has to create its own function or data model to process the content returned from the callback. The developer needs to know the item name, domain name, and structure of the JSON message returned from the Websocket Server to process data correctly.
+Typically the structure of the response message is the same as the structure mentioned in [Websocket](https://developers.refinitiv.com/en/api-catalog/refinitiv-real-time-opnsrc/refinitiv-websocket-api/quick-start). Hence it could say that the RDP.NET API responsible for managing the connection, send a request, and process a response message. It also maintains connectivity between the client app and the server on behalf of the application. The application has to create its own function or data model to process the content returned from the callback. The developer needs to know the item name, domain name, and structure of the JSON message returned from the Websocket Server to process data correctly.
 
-In our example app, we need to set the Name param to __"MRN_STORY"__ and set Domain Model to __"NewsTextAnalytics"__. Refer to structure of MRN Story from [MRN DATA MODELS AND ELEKTRON IMPLEMENTATION GUIDE](https://developers.refinitiv.com/sites/default/files/ThomsonReutersMRNElektronDataModelsv210_2.pdf), the refresh and update message provided by MRN feed is a list of key-value pairs of the FID provided under the Fields, and the data inside the update message of the MRN Story is quite different from the Market Price domain. It is because the FRAGMENT FID is compressed with gzip compression technology, thus requiring the consumer to concatenate and decompress the fragment data to reveal the JSON plain-text from that FID. What we need to add to this application is the data caching and the way to verifying and decompressing the MRN Story fragment to the JSON plain-text.
+In our example app, we need to set the Name param to __"MRN_STORY"__ and set Domain Model to __"NewsTextAnalytics"__. Refer to structure of MRN Story from [MRN Data Models Implementation Guide](https://developers.refinitiv.com/en/api-catalog/refinitiv-real-time-opnsrc/rt-sdk-java/documentation#mrn-data-models-implementation-guide), the refresh and update message provided by MRN feed is a list of key-value pairs of the FID provided under the Fields, and the data inside the update message of the MRN Story is quite different from the Market Price domain. It is because the FRAGMENT FID is compressed with gzip compression technology, thus requiring the consumer to concatenate and decompress the fragment data to reveal the JSON plain-text from that FID. What we need to add to this application is the data caching and the way to verifying and decompressing the MRN Story fragment to the JSON plain-text.
 
 The following JSON message is a sample of MRN update and fragment data the application needs to handle correctly.
 
@@ -478,11 +481,11 @@ The next step is to verify whether or not the size of concatenated fragment data
 
 ```
 
-Note that the sample codes were created to demonstrate the necessary step to concatenate, and decompress the MRN data fragments. The algorithm may not cover all scenarios that might happen while running the example app. You can run the project downloaded from [Github](https://github.com/Refinitiv-API-Samples/Example.RDP.RDPDotNetMRNStoryConsumer) with your TREP or ERT in Cloud account to see the result. You can modify the codes to use your data structure and add your algorithm to the codes.
+Note that the sample codes were created to demonstrate the necessary step to concatenate, and decompress the MRN data fragments. The algorithm may not cover all scenarios that might happen while running the example app. You can run the project downloaded from [Github](https://github.com/Refinitiv-API-Samples/Example.RDP.RDPDotNetMRNStoryConsumer) with your RTDS or RTO account to see the result. You can modify the codes to use your data structure and add your algorithm to the codes.
 
-The first approach requires more steps and codes to concatenate and verify the fragments before decompressing the MRN Story data to JSON plain-text. This approach may be suitable for a developer who wants want to leverage the functionality of the Session or Delivery layer provided by the library. And they want to control the algorithm to handle the MRN data themself. Some peoples may wish to logs or keep the refresh and update message along with the status in their storage or database system.
+The first approach requires more steps and codes to concatenate and verify the fragments before decompressing the MRN Story data to JSON plain-text. This approach may be suitable for a developer who wants want to leverage the functionality of the Session or Delivery layer provided by the library. And they want to control the algorithm to handle the MRN data themselves. Some peoples may wish to logs or keep the refresh and update message along with the status in their storage or database system.
 
-### Using RDP Content library to retreive MRN Story
+### Using RDP Content library to retrieve MRN Story
 
 We will talk about the second approach, which uses more shorter and easier codes. RDP.NET library provides a more easier way to retrieve particular content such as Price and MachineReadableNews or MRN data. To use the library for the content layer, we need to add the Nuget RDP.NET Content library to the project. You can use the following CLI to add the package as well. Note that the current version at the time we write this article still be a pre-release version 1.0.3-alpha.
 
@@ -735,7 +738,7 @@ You can use the information from the RDP.NET log file to analyze the data behavi
 
 You can download the solution from [Github](https://github.com/Refinitiv-API-Samples/Example.RDP.RDPDotNetMRNStoryConsumer). There are two project folders in the solution. The first project is a folder named __MRNStoryConsumer_Method1__. It's the project for the first approach. And the second one is folder __MRNStoryConsumer_Method2__. It's the project for the second approach.
 
-Before building and runing the app, you have to modify the credential for TREP or ERT in Cloud in the Program.cs file . If you wish to test with the TREP server please set useRDP variable in the Main method to false and then save the file. 
+Before building and runing the app, you have to modify the credential for RTDS or RTO in the Program.cs file . If you wish to test with the RTDS server please set useRDP variable in the Main method to false and then save the file. 
 
 ### Build and Run the project
 
@@ -771,7 +774,7 @@ Anyway, if you have Visual Studio Code and installed .NET Core Development plugi
 
 ## Summary
 
-This article provides a brief details of the RDP.NET library. It shows a sample usage to demonstrate how to use the library in the application to retrieve real-time MRN Story data from TREP, RDP, or ERT in Cloud. There are two main approaches provided in this article to process the MRN data.  The first one is to manually process the MRN Story update message and implement data caching algorithm to verify the MRN fragment and decompress the MRN Story data to JSON plain-text. The second approach is an easier way to retrieve the MRN Story data using the RDP.NET Content library. The RDP.NET Content library provides ContentFactory class and method CreateMachineReadableNews to create MachineReadableNews object. It provides OnNews callback function which returns MRN Story JSON data. The second approach is quite easy to use and should save development times. By the way, it may not be suitable for the project that requires access to original data from the Refresh and Update message provided by the WebSocket Server. Hence the recommended approach depending on the condition and preference of the user.
+This article provides a brief details of the RDP.NET library. It shows a sample usage to demonstrate how to use the library in the application to retrieve real-time MRN Story data from RTDS, RDP, or RTO. There are two main approaches provided in this article to process the MRN data.  The first one is to manually process the MRN Story update message and implement data caching algorithm to verify the MRN fragment and decompress the MRN Story data to JSON plain-text. The second approach is an easier way to retrieve the MRN Story data using the RDP.NET Content library. The RDP.NET Content library provides ContentFactory class and method CreateMachineReadableNews to create MachineReadableNews object. It provides OnNews callback function which returns MRN Story JSON data. The second approach is quite easy to use and should save development times. By the way, it may not be suitable for the project that requires access to original data from the Refresh and Update message provided by the WebSocket Server. Hence the recommended approach depending on the condition and preference of the user.
 
 ## Download
 
@@ -779,14 +782,14 @@ You can download full source files and projects from [GitHub](https://github.com
 
 ## References
 
-* [The Refinitiv Data Platform Libraries for .NET (RDP.NET)](https://developers.refinitiv.com/refinitiv-data-platform/refinitiv-data-platform-libraries)
+* [The Refinitiv Data Platform Libraries for .NET (RDP.NET)](https://developers.refinitiv.com/en/api-catalog/refinitiv-data-platform/refinitiv-data-platform-libraries)
 
-* [The Introduction to RDP Libraries document](https://developers.refinitiv.com/refinitiv-data-platform/refinitiv-data-platform-libraries/docs?content=62446&type=documentation_item)
+* [The Introduction to RDP Libraries document](https://developers.refinitiv.com/en/api-catalog/refinitiv-data-platform/refinitiv-data-platform-libraries/tutorials#introduction)
 
 * [Refinitiv DataPlatform for .NET Nuget](https://www.nuget.org/packages/Refinitiv.DataPlatform/)
 
 * [Refinitiv DataPlatform Content Nuget](https://www.nuget.org/packages/Refinitiv.DataPlatform.Content/)
 
-* [Elektron Websocket](https://developers.refinitiv.com/elektron/websocket-api/quick-start)
+* [Websocket API](https://developers.refinitiv.com/en/api-catalog/refinitiv-real-time-opnsrc/refinitiv-websocket-api/quick-start)
 
-* [MRN DATA MODELS AND ELEKTRON IMPLEMENTATION GUIDE](https://developers.refinitiv.com/sites/default/files/ThomsonReutersMRNElektronDataModelsv210_2.pdf)
+* [MRN Data Models Implementation Guide](https://developers.refinitiv.com/en/api-catalog/refinitiv-real-time-opnsrc/rt-sdk-java/documentation#mrn-data-models-implementation-guide)

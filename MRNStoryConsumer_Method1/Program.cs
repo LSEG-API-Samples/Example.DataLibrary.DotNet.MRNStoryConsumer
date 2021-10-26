@@ -11,8 +11,8 @@ namespace MRNStoryConsumer_Method1
 {
     class Program
     {
-        #region TREPCredential
-            private const string TREPUser = "<DACS Username>";
+        #region RTDSCredential
+            private const string RTDSUser = "<DACS Username>";
             private const string appID = "<App ID>";
             private const string position = "<Ip or Hostname>/net";
             private const string WebSocketHost = "<ADS/Websocker Server IP or Hostname>:<port>";
@@ -42,7 +42,7 @@ namespace MRNStoryConsumer_Method1
                 System.Console.WriteLine("Start DeploytedPlatformSession");
                 session = CoreFactory.CreateSession(new DeployedPlatformSession.Params()
                     .Host(WebSocketHost)
-                    .WithDacsUserName(TREPUser)
+                    .WithDacsUserName(RTDSUser)
                     .WithDacsApplicationID(appID)
                     .WithDacsPosition(position)
                     .OnState((s, state, msg) =>
